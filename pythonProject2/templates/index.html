@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sinyal Gücü</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            function fetchData() {
+                $.getJSON('/data', function(data) {
+                    $('#power').text(data.power.toFixed(2));
+                });
+            }
+            fetchData();
+            setInterval(fetchData, 1000);
+        });
+    </script>
+</head>
+<body>
+    <h1>Sinyal Gücü</h1>
+    <p>Sinyal Gücü (dBm): <span id="power">Yükleniyor...</span></p>
+</body>
+</html>
