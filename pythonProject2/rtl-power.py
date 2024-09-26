@@ -3,7 +3,7 @@ import time
 import subprocess
 
 def start_rtl_power(csv_filename):
-    command = f"rtl_power -f 446.449M:446.451M:1k -g 20 -i 3s {csv_filename}"
+    command = f"rtl_power -f 445.570M:445.580M:1k -g 20 -i 3s {csv_filename}"
     process = subprocess.Popen(command, shell=True)
     return process
 
