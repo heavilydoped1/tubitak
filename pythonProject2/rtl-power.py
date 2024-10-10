@@ -3,7 +3,7 @@ import time
 import subprocess
 
 def start_rtl_power(csv_filename):
-    command = f"rtl_power -f 445.570M:445.580M:1k -g 20 -i 3s {csv_filename}"
+    command = f"rtl_power -f 446.300M:446.600M:1k -i 5s {csv_filename}"
     process = subprocess.Popen(command, shell=True)
     return process
 
@@ -27,7 +27,7 @@ def rtl_output(csv_filename):
             if last_line:
                 parts = last_line.strip().split(',')
                 try:
-                    powerdb = float(parts[7].replace(' db', ''))
+                    powerdb = float(parts[262].replace(' dbm', ''))
                     if power is None or powerdb > power:
                         power = powerdb
                         data = {'power': power}
@@ -40,7 +40,7 @@ def rtl_output(csv_filename):
 
         except Exception as e:
             print(f"Beklenmeyen hata: {e}. 5 saniye sonra tekrar denenecek...")
-            time.sleep(5)  # Hata oluştuğunda bir süre bekleyip yeniden dene
+            time.sleep(5)
 
 if __name__ == "__main__":
     while True:
@@ -57,4 +57,4 @@ if __name__ == "__main__":
 
         except Exception as e:
             print(f"Başlatma hatası: {e}. 5 saniye sonra tekrar başlatılacak...")
-            time.sleep(5)  # Başarısız olursa 5 saniye sonra tekrar başlat
+            time.sleep(5)
