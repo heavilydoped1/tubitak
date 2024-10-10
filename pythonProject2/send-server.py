@@ -28,7 +28,7 @@ def get_data():
     if last_line:
         parts = last_line.strip().split(',')
         try:
-            power = float(parts[7])
+            power = float(parts[262])
         except (IndexError, ValueError):
             pass
 
