@@ -1,6 +1,7 @@
 import os
 import time
 import subprocess
+import serial
 
 def start_rtl_power(csv_filename):
     command = f"rtl_power -f 446.300M:446.600M:1k -i 5s {csv_filename}"
@@ -15,46 +16,41 @@ def read_last_line(csv_filename):
                 return lines[-1]
     except FileNotFoundError:
         pass
-    except Exception as e:
-        print(f"Hata: {e}")
     return None
 
+def parse_max_power_from_line(line):
+    try:
+        parts = line.strip().split(',')
+        dbm_values = [float(val.strip().replace(' dbm', '')) for val in parts[6:] if val.strip()]
+        if dbm_values:
+            return max(dbm_values)
+    except Exception as e:
+        print(f"Veri ayrıştırma hatası: {e}")
+    return None
+
+# LoRa seri bağlantı (örnek)
+lora = serial.Serial('/dev/ttyUSB0', 9600)
+
+def send_to_lora(data):
+    lora.write(f"{data:.2f} dBm\n".encode())
+    print(f"LoRa'ya gönderildi: {data:.2f} dBm")
+
 def rtl_output(csv_filename):
-    power = None
+    max_power = None
     while True:
-        try:
-            last_line = read_last_line(csv_filename)
-            if last_line:
-                parts = last_line.strip().split(',')
-                try:
-                    powerdb = float(parts[262].replace(' dbm', ''))
-                    if power is None or powerdb > power:
-                        power = powerdb
-                        data = {'power': power}
-                        print(f"Yeni güç değeri: {data}")
-                except (IndexError, ValueError) as e:
-                    print(f"Veri işleme hatası: {e}")
-                    continue
-
-            time.sleep(1)
-
-        except Exception as e:
-            print(f"Beklenmeyen hata: {e}. 5 saniye sonra tekrar denenecek...")
-            time.sleep(5)
+        last_line = read_last_line(csv_filename)
+        if last_line:
+            powerdb = parse_max_power_from_line(last_line)
+            if powerdb is not None and (max_power is None or powerdb > max_power):
+                max_power = powerdb
+                send_to_lora(max_power)
+        time.sleep(1)
 
 if __name__ == "__main__":
-    while True:
-        try:
-            script_dir = os.path.dirname(os.path.realpath(__file__))
-            csv_filename = os.path.join(script_dir, "output.csv")
-            rtl_power_process = start_rtl_power(csv_filename)
-            try:
-                rtl_output(csv_filename)
-            except KeyboardInterrupt:
-                rtl_power_process.terminate()
-                print("\nrtl_power durduruldu.")
-                break
-
-        except Exception as e:
-            print(f"Başlatma hatası: {e}. 5 saniye sonra tekrar başlatılacak...")
-            time.sleep(5)
+    csv_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "output.csv")
+    rtl_power_process = start_rtl_power(csv_filename)
+    try:
+        rtl_output(csv_filename)
+    except KeyboardInterrupt:
+        rtl_power_process.terminate()
+        print("\nrtl_power durduruldu.")
