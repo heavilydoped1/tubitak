@@ -1,4 +1,3 @@
-# send-signal.py
 from rtlsdr import RtlSdr
 import numpy as np
 import serial
@@ -22,7 +21,7 @@ def send_to_lora(lora, db):
 try:
     lora = init_lora()
     sdr = init_sdr()
-    print("✅ LoRa ve SDR başarıyla başlatıldı!")
+    print("lora ve sdr başarıyla başlatıldı!")
 
     while True:
         samples = sdr.read_samples(256*1024)
@@ -33,15 +32,15 @@ try:
         time.sleep(0.01)
 
 except Exception as e:
-    print(f"🚨 Hata oluştu: {e}")
+    print(f"hata : {e}")
     raise  # Bu sayede dıştaki process görebilir
 
 except KeyboardInterrupt:
-    print("🧠 Kullanıcı tarafından durduruldu.")
+    print("kullanıcı tarafından durduruldu")
 
 finally:
     try:
         sdr.close()
     except:
         pass
-    print("📡 SDR kapatıldı.")
+    print("sdr kapatıldı.")
