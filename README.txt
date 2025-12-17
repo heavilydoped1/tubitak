@@ -1,25 +1,96 @@
-Getting Started on Linux
-These are the instructions for installing our RTL-SDR Blog drivers. Type them into the Linux terminal one by one.
 
-First, if you already have some other drivers installed, please purge them from your system using the following commands:
+The system continuously:
+	1.	Listens to a specific RF band using RTL-SDR
+	2.	Calculates signal power (in dB)
+	3.	Sends this telemetry data to a LoRa transmitter
+	4.	Uses TDMA-based scheduling to support multiple nodes
+	5.	Monitors system health using watchdog 
 
-sudo apt purge ^librtlsdr
-sudo rm -rvf /usr/lib/librtlsdr* /usr/include/rtl-sdr* /usr/local/lib/librtlsdr* /usr/local/include/rtl-sdr* /usr/local/include/rtl_* /usr/local/bin/rtl_*
-Next you can install the RTL-SDR Blog drivers using the following.
+Hardware Requirements
 
-sudo apt-get install libusb-1.0-0-dev git cmake pkg-config build-essential
-git clone https://github.com/rtlsdrblog/rtl-sdr-blog
-cd rtl-sdr-blog/
-mkdir build
-cd build
-cmake ../ -DINSTALL_UDEV_RULES=ON
-make
-sudo make install
-sudo cp ../rtl-sdr.rules /etc/udev/rules.d/
-sudo ldconfig
-After installing the libraries you will likely need to unload the DVB-T drivers, which Linux uses by default. To unload them temporarily type "sudo rmmod dvb_usb_rtl28xxu" into terminal. This solution is only temporary as when you replug the dongle or restart the PC, the DVB-T drivers will be reloaded. For a permanent solution, create a text file "rtlsdr.conf" in /etc/modprobe.d and add the line "blacklist dvb_usb_rtl28xxu". You can use the one line command shown below to automatically write and create this file.
+RF Side
+	•	RTL-SDR USB dongle
+	•	Antenna tuned to target frequency
 
-echo 'blacklist dvb_usb_rtl28xxu' | sudo tee --append /etc/modprobe.d/blacklist-dvb_usb_rtl28xxu.conf
-Now you can restart your device. After it boots up again run "rtl_test" at the terminal with the RTL-SDR plugged in. It should start running.
+Communication
+	•	LoRa module (UART-based)
+	•	USB-to-TTL converter (if needed)
 
-NOTE: Some devices like the Orange Pi zero have a bug in their current mainline OSes. Instead of blacklisting "dvb_usb_rtl28xxu", you will need to blacklist "dvb_usb_rtl2832u". If you installed rtl-sdr by "apt-get", you will need to update the black list file at /etc/modprobe.d/rtl-sdr-blacklist.conf manually too.
+Host
+	•	Linux-based system (Ubuntu / Raspberry Pi recommended)
+
+Software Requirements
+	•	Python 3.x
+	•	Required libraries:
+
+pip install numpy pyrtlsdr pyserial
+
+
+⸻
+LoRa Initialization
+
+def init_lora():
+    return serial.Serial('/dev/ttyUSB0', 9600)
+
+	•	Opens UART connection to the LoRa module
+	•	/dev/ttyUSB0 → USB-to-Serial device
+	•	9600 baud → default LoRa UART speed
+
+RTL-SDR Initialization
+
+def init_sdr():
+    sdr = RtlSdr()
+    sdr.sample_rate = 2.4e6
+    sdr.center_freq = 446.450e6
+    sdr.gain = 5
+    return sdr
+
+	•	Samples RF data at 2.4 MS/s
+	•	Tuned to 446.450 MHz for PMR radios
+	•	Manual gain control for stability
+
+RF Power Calculation
+
+samples = sdr.read_samples(256*1024)
+Psig = np.mean(np.abs(samples)**2)
+Pfull = 1.0
+db = 10.0 * np.log10(Psig / Pfull)
+
+	•	Reads raw I/Q samples
+	•	Computes average signal power
+	•	Converts power to dB scale
+
+LoRa Data Transmission
+
+def send_to_lora(lora, db):
+    msg = f"1. drone: {db:.2f}"
+    lora.write(msg.encode())
+
+	•	Formats telemetry message
+	•	Sends power value via LoRa
+
+Main Loop
+
+while True:
+    ...
+    send_to_lora(lora, db)
+    time.sleep(0.01)
+
+	•	Continuous measurement
+	•	Periodic transmission
+	•	Timing can be synchronized with TDMA slots
+
+The TDMA implementation:
+	assigns time slots to different drones/nodes
+	prevents LoRa packet collision
+
+Files:
+	•	tdma_code.py → basic implementation
+	•	tdma-code-better.py → optimized & cleaner version
+
+Watchdog & Reliability
+
+	•	watchdog.py → monitors process health
+	
+	•	send-signal-watchdog.py → TX with fault tolerance
+
